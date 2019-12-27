@@ -28,10 +28,19 @@ fn main() -> std::io::Result<()> {
     for file in &files {
         let file_name = file.file_name().unwrap();
         let contents = fs::read_to_string(file)?;
-        let line_count = contents.lines().count();
+        let mut code_line = 0;
+        let mut whitespace_line = 0;
+
+        for line in contents.lines() {
+            if line.trim().is_empty() {
+                whitespace_line += 1;
+            } else {
+                code_line +=1;
+            }
+        }
 
         // Display the statistics about the code lines.
-        println!("file: {:?} - {:?} lines", file_name, line_count);
+        println!("file: {:?} - {:?} code lines, {:?} whitespace lines", file_name, code_line, whitespace_line);
     }
 
     Ok(())
