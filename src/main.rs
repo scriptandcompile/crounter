@@ -35,12 +35,15 @@ fn main() -> std::io::Result<()> {
             if line.trim().is_empty() {
                 whitespace_line += 1;
             } else {
-                code_line +=1;
+                code_line += 1;
             }
         }
 
         // Display the statistics about the code lines.
-        println!("file: {:?} - {:?} code lines, {:?} whitespace lines", file_name, code_line, whitespace_line);
+        println!(
+            "file: {:?} - {:?} code lines, {:?} whitespace lines",
+            file_name, code_line, whitespace_line
+        );
     }
 
     Ok(())
