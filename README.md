@@ -23,7 +23,7 @@ For most users, they should be able to make reasonable assessments based on the 
 ## Roadmap ##
 
 - [ ] Line Count.
-    - [ ] Standard (LoC) line of code count.
+    - [x] Standard (LoC) line of code count.
     - [ ] 'Syntactically significant' (LoC) line of code count.
         - [ ] C#.
         - [ ] Visual Basic 6. 
