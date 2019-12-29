@@ -12,25 +12,23 @@ use fs_extra::dir::get_dir_content;
 // results if a file/directory is blocked/missing and a log
 // of unaccessable or non-processable files/directories. 
 // For now, we simply bail currently on error.
-fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<String>, Box<dyn Error>> {
+fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let mut file_paths = vec!();
 
     for search_path in search_paths {
-        let mut dir_content = get_dir_content(search_path)?;
-        file_paths.append(&mut dir_content.files);
+        let dir_content = get_dir_content(search_path)?;
+        for file in dir_content.files {
+            file_paths.push(PathBuf::from(file));
+        }
     }
 
     Ok(file_paths)
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // Get the current directory.
-    let current_path = env::current_dir()?;
 
-    // Find the files in the directory.
-    let files = get_file_paths(&[current_path])?;
+fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>> {
     
-    for file_name in files {
+    for file_name in code_files {
 
         let contents = fs::read_to_string(&file_name)?;
         let mut code_line = 0;
@@ -49,6 +47,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             &file_name, code_line, whitespace_line
         );
     }
+
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    // Get the current directory.
+    let current_path = env::current_dir()?;
+
+    // Find the files in the directory.
+    let files = get_file_paths(&[current_path])?;
+    
+    process_code_statistics(&files)?;
 
     Ok(())
 }
