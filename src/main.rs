@@ -51,19 +51,21 @@ fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>>
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = App::new(env!("CARGO_PKG_NAME"))
+    let _matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .get_matches();
 
-    // Get the current directory.
-    let current_path = env::current_dir()?;
+    let arg_count = env::args().count();
 
-    // Find the files in the directory.
-    let files = get_file_paths(&[current_path])?;
+    if arg_count == 0 || arg_count == 1 {
+        let current_path = env::current_dir()?;
 
-    process_code_statistics(&files)?;
+        // Find the files in the directory.
+        let files = get_file_paths(&[current_path])?;
+        process_code_statistics(&files)?;
+    }
 
     Ok(())
 }
