@@ -1,13 +1,13 @@
 extern crate clap;
-extern crate fs_extra;
+extern crate ignore;
 
 use std::env;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 
-use clap::{App, Arg, SubCommand};
-use fs_extra::dir::get_dir_content;
+use ignore::WalkBuilder;
+use clap::{App, AppSettings, Arg, SubCommand};
 
 // Need to to fix this in the future to return a collection of
 // search path results and errors. That way we can provide partial
@@ -18,9 +18,13 @@ fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Erro
     let mut file_paths = vec![];
 
     for search_path in search_paths {
-        let dir_content = get_dir_content(search_path)?;
-        for file in dir_content.files {
-            file_paths.push(PathBuf::from(file));
+        let walker = WalkBuilder::new(&search_path).build();
+        for file in walker {
+            let dir_entry = file?;
+            if dir_entry.metadata()?.is_dir() {
+                continue;
+            }
+            file_paths.push(dir_entry.into_path());
         }
     }
 
@@ -64,8 +68,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Find the files in the directory.
         let files = get_file_paths(&[current_path])?;
+
         process_code_statistics(&files)?;
     }
 
     Ok(())
-}
+}ignore::
