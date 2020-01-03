@@ -6,8 +6,8 @@ use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 
-use ignore::WalkBuilder;
 use clap::{App, AppSettings, Arg, SubCommand};
+use ignore::WalkBuilder;
 
 // Need to to fix this in the future to return a collection of
 // search path results and errors. That way we can provide partial
@@ -32,8 +32,18 @@ fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Erro
 }
 
 fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>> {
+    let mut non_code_files = vec![];
+
+    let mut header_flag = false;
+
     for file_name in code_files {
-        let contents = fs::read_to_string(&file_name)?;
+        let contents = match fs::read_to_string(&file_name) {
+            Ok(content) => content,
+            Err(_message) => {
+                non_code_files.push(file_name);
+                continue;
+            }
+        };
         let mut code_line = 0;
         let mut whitespace_line = 0;
 
@@ -45,10 +55,26 @@ fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>>
             }
         }
 
+        if header_flag == false {
+            header_flag = true;
+            println!("Code files:");
+            println!("-----------------------------------");
+        }
+
         println!(
-            "file: {:?} - {:?} code lines, {:?} whitespace lines",
+            "{:?} - {:?} code lines, {:?} whitespace lines",
             &file_name, code_line, whitespace_line
         );
+    }
+
+    if non_code_files.len() != 0 {
+        println!("");
+        println!("Non-code files:");
+        println!("-----------------------------------");
+    }
+
+    for file_name in non_code_files {
+        println!("file: {:?}", &file_name);
     }
 
     Ok(())
@@ -93,23 +119,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let directory = if matches.value_of("directory").is_none() {
         println!("no directory given");
         env::current_dir()?
-    } else
-    {
+    } else {
         PathBuf::from(matches.value_of("directory").unwrap())
     };
 
     println!("directory: {:?}", directory);
-    
-    if arg_count == 0 || arg_count == 1 {
 
+    if arg_count == 0 || arg_count == 1 {
         // Find the files in the directory.
         let files = get_file_paths(&[directory])?;
 
         process_code_statistics(&files)?;
-        
+
         return Ok(());
     }
-    
+
     match matches.subcommand() {
         ("all", Some(_config)) => {
             println!("all command");
@@ -118,7 +142,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             process_code_statistics(&files)?;
             Ok(())
-        },
+        }
         ("loc", Some(_config)) => {
             println!("all command");
             // Find the files in the directory.
@@ -126,8 +150,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             process_code_statistics(&files)?;
             Ok(())
-        },
+        }
         _ => Ok(()),
     }
-
 }
