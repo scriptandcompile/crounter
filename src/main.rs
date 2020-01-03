@@ -18,7 +18,6 @@ fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Erro
     let mut file_paths = vec![];
 
     for search_path in search_paths {
-
         if !search_path.exists() {
             println!("Unable to find directory: {}", search_path.display());
             continue;
@@ -44,21 +43,84 @@ fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Erro
     Ok(file_paths)
 }
 
-fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>> {
+pub struct LineStatistics {
+    pub total: u64,
+    pub whitespace: u64,
+    pub code: u64,
+}
 
-    let mut non_code_files = vec![];
-    let mut non_code_header_flag = false;
-    
-    let mut code_file_count = 0;
+pub struct FileStatistics {
+    pub file_path: PathBuf,
+    pub loc: LineStatistics,
+}
 
-    let mut code_lines_total = 0;
-    let mut whitespace_lines_total = 0;
+pub struct ProjectStatistics {
+    pub code_files: Vec<FileStatistics>,
+    pub non_code_files: Vec<PathBuf>,
+}
 
-    for file_name in code_files {
-        let contents = match fs::read_to_string(&file_name) {
+fn display_statistics(project_stats: &ProjectStatistics) {
+    for (index, code_file) in project_stats.code_files.iter().enumerate() {
+        if index == 0 {
+            println!("Code files:");
+            println!("-----------------------------------");
+        }
+
+        println!(
+            "{} - {} code lines, {} whitespace lines",
+            &code_file.file_path.display(),
+            code_file.loc.code,
+            code_file.loc.whitespace
+        );
+    }
+
+    for (index, non_code_file) in project_stats.non_code_files.iter().enumerate() {
+        if index == 0 {
+            println!("");
+            println!("Non-code files:");
+            println!("-----------------------------------");
+        }
+
+        println!("file: {}", &non_code_file.display());
+    }
+
+    let code_file_count = project_stats.code_files.len();
+    let non_code_file_count = project_stats.non_code_files.len();
+    let code_lines_total = project_stats
+        .code_files
+        .iter()
+        .fold(0, |accumulator, code_file| accumulator + code_file.loc.code);
+    let whitespace_lines_total = project_stats
+        .code_files
+        .iter()
+        .fold(0, |accumulator, code_file| {
+            accumulator + code_file.loc.whitespace
+        });
+
+    if code_file_count != 0 {
+        println!("");
+        println!("Totals:");
+        println!("-----------------------------------");
+        println!(
+            "{} code files, {} non-code files",
+            code_file_count, non_code_file_count
+        );
+        println!("Code lines: {}", code_lines_total);
+        println!("Whitespace lines: {}", whitespace_lines_total);
+    }
+}
+
+fn process_code_statistics(code_files: &[PathBuf]) -> Result<ProjectStatistics, Box<dyn Error>> {
+    let mut project_stats = ProjectStatistics {
+        code_files: vec![],
+        non_code_files: vec![],
+    };
+
+    for file_path in code_files {
+        let contents = match fs::read_to_string(&file_path) {
             Ok(content) => content,
             Err(_message) => {
-                non_code_files.push(file_name);
+                project_stats.non_code_files.push(file_path.to_path_buf());
                 continue;
             }
         };
@@ -73,46 +135,18 @@ fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>>
                 code_lines += 1;
             }
         }
-        
-        code_lines_total += code_lines;
-        whitespace_lines_total += whitespace_lines;
-        
-        code_file_count += 1;
 
-        if non_code_header_flag == false {
-            non_code_header_flag = true;
-            println!("Code files:");
-            println!("-----------------------------------");
-        }
-
-        println!(
-            "{} - {} code lines, {} whitespace lines",
-            &file_name.display(), code_lines, whitespace_lines
-        );
+        project_stats.code_files.push(FileStatistics {
+            file_path: file_path.to_path_buf(),
+            loc: LineStatistics {
+                total: whitespace_lines + code_lines,
+                whitespace: whitespace_lines,
+                code: code_lines,
+            },
+        });
     }
 
-    let non_code_file_count = non_code_files.len();
-
-    if non_code_file_count != 0 {
-        println!("");
-        println!("Non-code files:");
-        println!("-----------------------------------");
-    }
-
-    for file_name in non_code_files {
-        println!("file: {}", &file_name.display());
-    }
-
-    if code_files.len() != 0 {
-        println!("");
-        println!("Totals:");
-        println!("-----------------------------------");
-        println!("{} code files, {} non-code files", code_file_count, non_code_file_count);
-        println!("Code lines: {}", code_lines_total);
-        println!("Whitespace lines: {}", whitespace_lines_total);
-    }
-
-    Ok(())
+    Ok(project_stats)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -156,12 +190,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     } else {
         PathBuf::from(matches.value_of("directory").unwrap())
     };
-    
+
     if arg_count == 0 || arg_count == 1 {
         // Find the files in the directory.
         let files = get_file_paths(&[directory])?;
 
-        process_code_statistics(&files)?;
+        let project_stats = process_code_statistics(&files)?;
+        display_statistics(&project_stats);
 
         return Ok(());
     }
@@ -171,21 +206,27 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Find the files in the directory.
             let files = get_file_paths(&[directory])?;
 
-            process_code_statistics(&files)?;
+            let project_stats = process_code_statistics(&files)?;
+            display_statistics(&project_stats);
+
             Ok(())
-        },
+        }
         ("loc", Some(_config)) => {
             // Find the files in the directory.
             let files = get_file_paths(&[directory])?;
 
-            process_code_statistics(&files)?;
+            let project_stats = process_code_statistics(&files)?;
+            display_statistics(&project_stats);
+
             Ok(())
-        },
+        }
         _ => {
             // Find the files in the directory.
             let files = get_file_paths(&[directory])?;
-            
-            process_code_statistics(&files)?;
+
+            let project_stats = process_code_statistics(&files)?;
+            display_statistics(&project_stats);
+
             Ok(())
         }
     }
