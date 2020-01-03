@@ -32,9 +32,14 @@ fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Erro
 }
 
 fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>> {
-    let mut non_code_files = vec![];
 
-    let mut header_flag = false;
+    let mut non_code_files = vec![];
+    let mut non_code_header_flag = false;
+    
+    let mut code_file_count = 0;
+
+    let mut code_lines_total = 0;
+    let mut whitespace_lines_total = 0;
 
     for file_name in code_files {
         let contents = match fs::read_to_string(&file_name) {
@@ -44,37 +49,54 @@ fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>>
                 continue;
             }
         };
-        let mut code_line = 0;
-        let mut whitespace_line = 0;
+
+        let mut code_lines = 0;
+        let mut whitespace_lines = 0;
 
         for line in contents.lines() {
             if line.trim().is_empty() {
-                whitespace_line += 1;
+                whitespace_lines += 1;
             } else {
-                code_line += 1;
+                code_lines += 1;
             }
         }
+        
+        code_lines_total += code_lines;
+        whitespace_lines_total += whitespace_lines;
+        
+        code_file_count += 1;
 
-        if header_flag == false {
-            header_flag = true;
+        if non_code_header_flag == false {
+            non_code_header_flag = true;
             println!("Code files:");
             println!("-----------------------------------");
         }
 
         println!(
-            "{:?} - {:?} code lines, {:?} whitespace lines",
-            &file_name, code_line, whitespace_line
+            "{} - {} code lines, {} whitespace lines",
+            &file_name.display(), code_lines, whitespace_lines
         );
     }
 
-    if non_code_files.len() != 0 {
+    let non_code_file_count = non_code_files.len();
+
+    if non_code_file_count != 0 {
         println!("");
         println!("Non-code files:");
         println!("-----------------------------------");
     }
 
     for file_name in non_code_files {
-        println!("file: {:?}", &file_name);
+        println!("file: {}", &file_name.display());
+    }
+
+    if code_files.len() != 0 {
+        println!("");
+        println!("Totals:");
+        println!("-----------------------------------");
+        println!("{} code files, {} non-code files", code_file_count, non_code_file_count);
+        println!("Code lines: {}", code_lines_total);
+        println!("Whitespace lines: {}", whitespace_lines_total);
     }
 
     Ok(())
