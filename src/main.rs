@@ -55,22 +55,79 @@ fn process_code_statistics(code_files: &[PathBuf]) -> Result<(), Box<dyn Error>>
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let _matches = App::new(env!("CARGO_PKG_NAME"))
+    let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
+        .arg(
+            Arg::with_name("directory")
+                .takes_value(true)
+                .short("d")
+                .help("Directory to process."),
+        )
+        .subcommand(
+            SubCommand::with_name("all")
+                .setting(AppSettings::Hidden)
+                .about("Run all metric commands.")
+                .arg(
+                    Arg::with_name("directory")
+                        .takes_value(true)
+                        .short("d")
+                        .help("Directory to process."),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("loc")
+                .about("Lines of code metric command.")
+                .arg(
+                    Arg::with_name("directory")
+                        .takes_value(true)
+                        .short("d")
+                        .help("Directory to process."),
+                ),
+        )
         .get_matches();
 
     let arg_count = env::args().count();
 
+    let directory = if matches.value_of("directory").is_none() {
+        println!("no directory given");
+        env::current_dir()?
+    } else
+    {
+        PathBuf::from(matches.value_of("directory").unwrap())
+    };
+
+    println!("directory: {:?}", directory);
+    
     if arg_count == 0 || arg_count == 1 {
-        let current_path = env::current_dir()?;
 
         // Find the files in the directory.
-        let files = get_file_paths(&[current_path])?;
+        let files = get_file_paths(&[directory])?;
 
         process_code_statistics(&files)?;
+        
+        return Ok(());
+    }
+    
+    match matches.subcommand() {
+        ("all", Some(_config)) => {
+            println!("all command");
+            // Find the files in the directory.
+            let files = get_file_paths(&[directory])?;
+
+            process_code_statistics(&files)?;
+            Ok(())
+        },
+        ("loc", Some(_config)) => {
+            println!("all command");
+            // Find the files in the directory.
+            let files = get_file_paths(&[directory])?;
+
+            process_code_statistics(&files)?;
+            Ok(())
+        },
+        _ => Ok(()),
     }
 
-    Ok(())
-}ignore::
+}
