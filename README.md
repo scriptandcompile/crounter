@@ -34,3 +34,7 @@ For most users, they should be able to make reasonable assessments based on the 
 
 - [x] .gitignore support.
 - [x] .ignore support.
+
+- [ ] Output.
+    - [x] Console.
+    - [x] CSV.

@@ -4,7 +4,9 @@ extern crate ignore;
 use std::env;
 use std::error::Error;
 use std::fs;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use ignore::WalkBuilder;
@@ -110,6 +112,64 @@ fn display_statistics(project_stats: &ProjectStatistics) {
     }
 }
 
+fn write_statistics_csv<P: AsRef<Path>>(
+    path: P,
+    project_stats: &ProjectStatistics,
+) -> Result<(), Box<dyn Error>> {
+    let mut file = File::create(&path)?;
+
+    for (index, code_file) in project_stats.code_files.iter().enumerate() {
+        if index == 0 {
+            writeln!(file, "Code file path, code lines, whitespace lines")?;
+        }
+
+        writeln!(
+            file,
+            "{}, {}, {}",
+            &code_file.file_path.display(),
+            code_file.loc.code,
+            code_file.loc.whitespace
+        )?;
+    }
+
+    for (index, non_code_file) in project_stats.non_code_files.iter().enumerate() {
+        if index == 0 {
+            writeln!(file, "")?;
+            writeln!(file, "Non-code file path")?;
+        }
+
+        writeln!(file, "{}", &non_code_file.display())?;
+    }
+
+    let code_file_count = project_stats.code_files.len();
+    let non_code_file_count = project_stats.non_code_files.len();
+    let code_lines_total = project_stats
+        .code_files
+        .iter()
+        .fold(0, |accumulator, code_file| accumulator + code_file.loc.code);
+    let whitespace_lines_total = project_stats
+        .code_files
+        .iter()
+        .fold(0, |accumulator, code_file| {
+            accumulator + code_file.loc.whitespace
+        });
+
+    if code_file_count != 0 {
+        writeln!(file, "")?;
+        writeln!(
+            file,
+            "total code files, total non-code files, total code lines, total whitespace lines"
+        )?;
+        writeln!(
+            file,
+            "{}, {}, {}, {}",
+            code_file_count, non_code_file_count, code_lines_total, whitespace_lines_total
+        )?;
+    }
+
+    Ok(())
+}
+
 fn process_code_statistics(code_files: &[PathBuf]) -> Result<ProjectStatistics, Box<dyn Error>> {
     let mut project_stats = ProjectStatistics {
         code_files: vec![],
@@ -160,6 +220,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short("d")
                 .help("Directory to process."),
         )
+        .arg(
+            Arg::with_name("output")
+                .takes_value(true)
+                .short("o")
+                .help("Path of file to save output."),
+        )
         .subcommand(
             SubCommand::with_name("all")
                 .setting(AppSettings::Hidden)
@@ -169,6 +235,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .takes_value(true)
                         .short("d")
                         .help("Directory to process."),
+                )
+                .arg(
+                    Arg::with_name("output")
+                        .takes_value(true)
+                        .short("o")
+                        .help("Path of file to save output."),
                 ),
         )
         .subcommand(
@@ -179,6 +251,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .takes_value(true)
                         .short("d")
                         .help("Directory to process."),
+                )
+                .arg(
+                    Arg::with_name("output")
+                        .takes_value(true)
+                        .short("o")
+                        .help("Path of file to save output."),
                 ),
         )
         .get_matches();
@@ -191,12 +269,25 @@ fn main() -> Result<(), Box<dyn Error>> {
         PathBuf::from(matches.value_of("directory").unwrap())
     };
 
+    let output_path = matches.value_of("output").unwrap_or("");
+
+    let output_type = if output_path.ends_with(".csv") {
+        "csv"
+    } else {
+        "console"
+    };
+
     if arg_count == 0 || arg_count == 1 {
         // Find the files in the directory.
         let files = get_file_paths(&[directory])?;
 
         let project_stats = process_code_statistics(&files)?;
-        display_statistics(&project_stats);
+
+        if output_type == "console" {
+            display_statistics(&project_stats);
+        } else if output_type == "csv" {
+            write_statistics_csv(output_path, &project_stats)?;
+        }
 
         return Ok(());
     }
@@ -207,7 +298,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             let files = get_file_paths(&[directory])?;
 
             let project_stats = process_code_statistics(&files)?;
-            display_statistics(&project_stats);
+
+            if output_type == "console" {
+                display_statistics(&project_stats);
+            } else if output_type == "csv" {
+                write_statistics_csv(output_path, &project_stats)?;
+            }
 
             Ok(())
         }
@@ -216,7 +312,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             let files = get_file_paths(&[directory])?;
 
             let project_stats = process_code_statistics(&files)?;
-            display_statistics(&project_stats);
+
+            if output_type == "console" {
+                display_statistics(&project_stats);
+            } else if output_type == "csv" {
+                write_statistics_csv(output_path, &project_stats)?;
+            }
 
             Ok(())
         }
@@ -225,7 +326,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             let files = get_file_paths(&[directory])?;
 
             let project_stats = process_code_statistics(&files)?;
-            display_statistics(&project_stats);
+
+            if output_type == "console" {
+                display_statistics(&project_stats);
+            } else if output_type == "csv" {
+                write_statistics_csv(output_path, &project_stats)?;
+            }
 
             Ok(())
         }
