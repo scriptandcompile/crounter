@@ -139,7 +139,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let arg_count = env::args().count();
 
     let directory = if matches.value_of("directory").is_none() {
-        println!("no directory given");
         env::current_dir()?
     } else {
         PathBuf::from(matches.value_of("directory").unwrap())
