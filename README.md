@@ -26,12 +26,11 @@ For most users, they should be able to make reasonable assessments based on the 
     - [x] Standard (LoC) line of code count.
     - [ ] 'Syntactically significant' (LoC) line of code count.
         - [ ] C#.
-        - [ ] Visual Basic 6. 
-        - [ ] Delphi.
-        - [ ] Rust.
+    let mut code_file_count = 0;
 
-- [ ] Project Awareness.
-    - [ ] C# Visual Studio.
-    - [ ] Visual Basic 6.
+    let mut code_lines_total = 0;
     - [ ] Delphi.
     - [ ] Cargo Rust.
+
+- [x] .gitignore support.
+- [x] .ignore support.
