@@ -144,8 +144,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         PathBuf::from(matches.value_of("directory").unwrap())
     };
 
-    println!("directory: {:?}", directory);
-
     if arg_count == 0 || arg_count == 1 {
         // Find the files in the directory.
         let files = get_file_paths(&[directory])?;
