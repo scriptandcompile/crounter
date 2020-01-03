@@ -18,9 +18,22 @@ fn get_file_paths(search_paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn Erro
     let mut file_paths = vec![];
 
     for search_path in search_paths {
+
+        if !search_path.exists() {
+            println!("Unable to find directory: {}", search_path.display());
+            continue;
+        }
+
         let walker = WalkBuilder::new(&search_path).build();
         for file in walker {
-            let dir_entry = file?;
+            let dir_entry = match file {
+                Ok(entry) => entry,
+                Err(er) => {
+                    println!("err is devine: {:?}", er);
+                    continue;
+                }
+            };
+
             if dir_entry.metadata()?.is_dir() {
                 continue;
             }
@@ -143,7 +156,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     } else {
         PathBuf::from(matches.value_of("directory").unwrap())
     };
-
+    
     if arg_count == 0 || arg_count == 1 {
         // Find the files in the directory.
         let files = get_file_paths(&[directory])?;
@@ -155,21 +168,25 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match matches.subcommand() {
         ("all", Some(_config)) => {
-            println!("all command");
             // Find the files in the directory.
             let files = get_file_paths(&[directory])?;
 
             process_code_statistics(&files)?;
             Ok(())
-        }
+        },
         ("loc", Some(_config)) => {
-            println!("all command");
             // Find the files in the directory.
             let files = get_file_paths(&[directory])?;
 
             process_code_statistics(&files)?;
             Ok(())
+        },
+        _ => {
+            // Find the files in the directory.
+            let files = get_file_paths(&[directory])?;
+            
+            process_code_statistics(&files)?;
+            Ok(())
         }
-        _ => Ok(()),
     }
 }
